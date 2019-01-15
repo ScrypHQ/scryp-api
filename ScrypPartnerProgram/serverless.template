@@ -1,0 +1,147 @@
+{
+  "AWSTemplateFormatVersion" : "2010-09-09",
+  "Transform" : "AWS::Serverless-2016-10-31",
+  "Description" : "AWS Serverless API that exposes the add, remove and get operations for a partnerging platform using Amazon DynamoDB.",
+  "Parameters" : {
+    "ShouldCreateTable" : {
+      "Type" : "String",        
+      "AllowedValues" : ["true", "false"],
+      "Description" : "If true then the DynamoDB partnerging table will be created with the CloudFormation stack."
+    },  
+    "PartnerTableName" : {
+        "Type" : "String",
+        "Description" : "Name of DynamoDB table used to store the partner post. If left blank a new table will be created.",
+        "MinLength" : "0",
+		"Default": "PartnerTable"
+    },
+    "ReadCapacity" : {
+        "Type" : "Number",
+        "Description" : "Read capacity for the DynamoDB partner table.",
+        "Default" : "3",
+        "MinValue" : 1
+    },
+    "WriteCapacity" : {
+        "Type" : "Number",
+        "Description" : "Write capacity for the DynamoDB partner table.",
+        "Default" : "3",
+        "MinValue" : 1
+    }
+  },
+
+  "Conditions" : {
+    "CreatePartnerTable" : {"Fn::Equals" : [{"Ref" : "ShouldCreateTable"}, "true"]},
+	  "TableNameGenerated" : {"Fn::Equals" : [{"Ref" : "PartnerTableName"}, ""]}
+  },
+
+  "Resources" : {
+
+    "GetPartners" : {
+      "Type" : "AWS::Serverless::Function",
+      "Properties": {
+        "Handler": "ScrypPartnerProgram::ScrypPartnerProgram.Functions::GetPartnersAsync",
+        "Runtime": "dotnetcore2.1",
+        "CodeUri": "",
+        "Description": "Function to get a list of partners",
+        "MemorySize": 256,
+        "Timeout": 30,
+        "Role": null,
+        "Policies": [ "AWSLambdaFullAccess" ],
+        "Environment" : {
+          "Variables" : {
+            "PartnerTable" : { "Fn::If" : ["CreatePartnerTable", {"Ref":"PartnerTable"}, { "Ref" : "PartnerTableName" } ] }
+          }
+        },
+        "Events": {
+          "PutResource": {
+            "Type": "Api",
+            "Properties": {
+              "Path": "/",
+              "Method": "GET"
+            }
+          }
+        }
+      }
+    },
+
+    "GetPartner" : {
+      "Type" : "AWS::Serverless::Function",
+      "Properties": {
+        "Handler": "ScrypPartnerProgram::ScrypPartnerProgram.Functions::GetPartnerAsync",
+        "Runtime": "dotnetcore2.1",
+        "CodeUri": "",
+        "Description": "Function to get a single partner",
+        "MemorySize": 256,
+        "Timeout": 30,
+        "Role": null,
+        "Policies": [ "AWSLambdaFullAccess" ],
+        "Environment" : {
+          "Variables" : {
+            "PartnerTable" : { "Fn::If" : ["CreatePartnerTable", {"Ref":"PartnerTable"}, { "Ref" : "PartnerTableName" } ] }
+          }
+        },
+        "Events": {
+          "PutResource": {
+            "Type": "Api",
+            "Properties": {
+              "Path": "/{Id}",
+              "Method": "GET"
+            }
+          }
+        }
+      }
+    },
+    
+
+    "AddPartner" : {
+      "Type" : "AWS::Serverless::Function",
+      "Properties": {
+        "Handler": "ScrypPartnerProgram::ScrypPartnerProgram.Functions::AddPartnerAsync",
+        "Runtime": "dotnetcore2.1",
+        "CodeUri": "",
+        "Description": "Function to add a partner",
+        "MemorySize": 256,
+        "Timeout": 30,
+        "Role": null,
+        "Policies": [ "AWSLambdaFullAccess" ],
+        "Environment" : {
+          "Variables" : {
+            "PartnerTable" : { "Fn::If" : ["CreatePartnerTable", {"Ref":"PartnerTable"}, { "Ref" : "PartnerTableName" } ] }
+          }
+        },
+        "Events": {
+          "PutResource": {
+            "Type": "Api",
+            "Properties": {
+              "Path": "/",
+              "Method": "PUT"
+            }
+          }
+        }
+      }
+    },
+
+    "PartnerTable" : {
+        "Type" : "AWS::DynamoDB::Table",
+        "Condition" : "CreatePartnerTable",
+        "Properties" : {
+            "TableName" : { "Fn::If" : ["TableNameGenerated", {"Ref" : "AWS::NoValue" }, { "Ref" : "PartnerTableName" } ] },
+            "AttributeDefinitions" : [
+              {"AttributeName" : "PartnerEmail", "AttributeType" : "S"}
+            ],
+            "KeySchema"            : [
+              {"AttributeName" : "PartnerEmail", "KeyType" : "HASH"}
+            ],
+            "ProvisionedThroughput" : {
+                "ReadCapacityUnits" : { "Ref" : "ReadCapacity" },
+                "WriteCapacityUnits" : { "Ref" : "WriteCapacity" }
+            }
+        }
+    }
+  },
+
+  "Outputs" : {
+    "PartnerTable" : {
+        "Value" : { "Fn::If" : ["CreatePartnerTable", {"Ref":"PartnerTable"}, { "Ref" : "PartnerTableName" } ] }
+    }
+  }
+}

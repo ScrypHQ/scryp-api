@@ -1,0 +1,17 @@
+﻿################################################################################
+# This .gitignore file was automatically created by Microsoft(R) Visual Studio.
+################################################################################
+
+/ScrypCommon/bin
+/.vs/Scryp/v15/Server/sqlite3
+/ScrypCommon/obj
+/ScrypOfferLogs/obj
+/ScrypOfferLogs/Properties
+/.vs/config
+/ScrypOfferProgram/bin/Release/netcoreapp2.1
+/ScrypOfferProgram/obj
+/ScrypOfferProgram/Properties
+/ScrypPartnerProgram/bin
+/ScrypPartnerProgram/obj
+/ScrypPartnerProgram/Properties/launchSettings.json
+/.vs

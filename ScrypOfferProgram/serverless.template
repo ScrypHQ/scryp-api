@@ -1,0 +1,146 @@
+{
+  "AWSTemplateFormatVersion" : "2010-09-09",
+  "Transform" : "AWS::Serverless-2016-10-31",
+  "Description" : "AWS Serverless API that exposes the add, remove and get operations for a offerging platform using Amazon DynamoDB.",
+  "Parameters" : {
+    "ShouldCreateTable" : {
+      "Type" : "String",        
+      "AllowedValues" : ["true", "false"],
+      "Description" : "If true then the DynamoDB offerging table will be created with the CloudFormation stack."
+    },  
+    "OfferTableName" : {
+        "Type" : "String",
+        "Description" : "Name of DynamoDB table used to store the offer post. If left blank a new table will be created.",
+        "MinLength" : "0"
+    },
+    "ReadCapacity" : {
+        "Type" : "Number",
+        "Description" : "Read capacity for the DynamoDB offer table.",
+        "Default" : "3",
+        "MinValue" : 1
+    },
+    "WriteCapacity" : {
+        "Type" : "Number",
+        "Description" : "Write capacity for the DynamoDB offer table.",
+        "Default" : "3",
+        "MinValue" : 1
+    }
+  },
+
+  "Conditions" : {
+    "CreateOfferTable" : {"Fn::Equals" : [{"Ref" : "ShouldCreateTable"}, "true"]},
+	  "TableNameGenerated" : {"Fn::Equals" : [{"Ref" : "OfferTableName"}, ""]}
+  },
+
+  "Resources" : {
+
+    "GetOffers" : {
+      "Type" : "AWS::Serverless::Function",
+      "Properties": {
+        "Handler": "ScrypOfferProgram::ScrypOfferProgram.Functions::GetOffersAsync",
+        "Runtime": "dotnetcore2.1",
+        "CodeUri": "",
+        "Description": "Function to get a list of offers",
+        "MemorySize": 256,
+        "Timeout": 30,
+        "Role": null,
+        "Policies": [ "AWSLambdaFullAccess" ],
+        "Environment" : {
+          "Variables" : {
+            "OfferTable" : { "Fn::If" : ["CreateOfferTable", {"Ref":"OfferTable"}, { "Ref" : "OfferTableName" } ] }
+          }
+        },
+        "Events": {
+          "PutResource": {
+            "Type": "Api",
+            "Properties": {
+              "Path": "/",
+              "Method": "GET"
+            }
+          }
+        }
+      }
+    },
+
+    "GetOffer" : {
+      "Type" : "AWS::Serverless::Function",
+      "Properties": {
+        "Handler": "ScrypOfferProgram::ScrypOfferProgram.Functions::GetOfferAsync",
+        "Runtime": "dotnetcore2.1",
+        "CodeUri": "",
+        "Description": "Function to get a single offer",
+        "MemorySize": 256,
+        "Timeout": 30,
+        "Role": null,
+        "Policies": [ "AWSLambdaFullAccess" ],
+        "Environment" : {
+          "Variables" : {
+            "OfferTable" : { "Fn::If" : ["CreateOfferTable", {"Ref":"OfferTable"}, { "Ref" : "OfferTableName" } ] }
+          }
+        },
+        "Events": {
+          "PutResource": {
+            "Type": "Api",
+            "Properties": {
+              "Path": "/{Id}",
+              "Method": "GET"
+            }
+          }
+        }
+      }
+    },
+    
+
+    "AddOffer" : {
+      "Type" : "AWS::Serverless::Function",
+      "Properties": {
+        "Handler": "ScrypOfferProgram::ScrypOfferProgram.Functions::AddOfferAsync",
+        "Runtime": "dotnetcore2.1",
+        "CodeUri": "",
+        "Description": "Function to add a offer",
+        "MemorySize": 256,
+        "Timeout": 30,
+        "Role": null,
+        "Policies": [ "AWSLambdaFullAccess" ],
+        "Environment" : {
+          "Variables" : {
+            "OfferTable" : { "Fn::If" : ["CreateOfferTable", {"Ref":"OfferTable"}, { "Ref" : "OfferTableName" } ] }
+          }
+        },
+        "Events": {
+          "PutResource": {
+            "Type": "Api",
+            "Properties": {
+              "Path": "/",
+              "Method": "PUT"
+            }
+          }
+        }
+      }
+    },
+
+    "OfferTable" : {
+        "Type" : "AWS::DynamoDB::Table",
+        "Condition" : "CreateOfferTable",
+        "Properties" : {
+            "TableName" : { "Fn::If" : ["TableNameGenerated", {"Ref" : "AWS::NoValue" }, { "Ref" : "OfferTableName" } ] },
+            "AttributeDefinitions" : [
+              {"AttributeName" : "Id", "AttributeType" : "S"}
+            ],
+            "KeySchema"            : [
+              {"AttributeName" : "Id", "KeyType" : "HASH"}
+            ],
+            "ProvisionedThroughput" : {
+                "ReadCapacityUnits" : { "Ref" : "ReadCapacity" },
+                "WriteCapacityUnits" : { "Ref" : "WriteCapacity" }
+            }
+        }
+    }
+  },
+
+  "Outputs" : {
+    "OfferTable" : {
+        "Value" : { "Fn::If" : ["CreateOfferTable", {"Ref":"OfferTable"}, { "Ref" : "OfferTableName" } ] }
+    }
+  }
+}
